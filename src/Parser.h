@@ -58,6 +58,12 @@ struct Parser {
     auto lhs = parse_atom();
     while (true) {
       Token peeked_token = m_luthor->peek_token();
+
+      if (peeked_token.m_type == Token::Lparen) {
+        auto expr = parse_expression(0);
+        continue;
+      }
+
       auto maybe_binop_type = token_to_binop_type(peeked_token.m_type);
 
       if (!maybe_binop_type.has_value()) {

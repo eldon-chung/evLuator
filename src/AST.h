@@ -15,7 +15,7 @@ struct Statement {
 };
 
 struct Expression {
-  virtual size_t evaluate(Environment const &) const = 0;
+  virtual Value evaluate(Environment const &) const = 0;
   virtual ~Expression();
   virtual bool is_name() const {
     return false;
@@ -23,8 +23,8 @@ struct Expression {
 };
 
 struct Number : Expression {
-  size_t m_number;
-  size_t evaluate(Environment const &) const override {
+  Value m_number;
+  Value evaluate(Environment const &) const override {
     return m_number;
   }
 
@@ -34,7 +34,7 @@ struct Number : Expression {
 
 struct Name : Expression {
   std::string m_name;
-  size_t evaluate(Environment const &env) const override {
+  Value evaluate(Environment const &env) const override {
     return env[m_name];
   }
 
@@ -65,22 +65,45 @@ struct BinOp : Expression {
         m_right_expression(std::move(right_expression)), m_type(type) {
   }
 
-  size_t evaluate(Environment const &env) const override {
-    size_t left_op = m_left_expression->evaluate(env);
-    size_t right_op = m_right_expression->evaluate(env);
+  Value evaluate(Environment const &env) const override {
+    Value left_op = m_left_expression->evaluate(env);
+    Value right_op = m_right_expression->evaluate(env);
+
+    if (!std::holds_alternative<size_t>(left_op.m_value)) {
+      throw std::runtime_error("left operand is not a size_t!");
+    }
+
+    if (!std::holds_alternative<size_t>(right_op.m_value)) {
+      throw std::runtime_error("right operand is not a size_t!");
+    }
 
     switch (m_type) {
     case Plus:
-      return left_op + right_op;
+      return std::get<size_t>(left_op.m_value) +
+             std::get<size_t>(right_op.m_value);
     case Minus:
-      return left_op - right_op;
+      return std::get<size_t>(left_op.m_value) -
+             std::get<size_t>(right_op.m_value);
     case Divide:
-      return left_op / right_op;
+      return std::get<size_t>(left_op.m_value) /
+             std::get<size_t>(right_op.m_value);
     case Times:
-      return left_op * right_op;
+      return std::get<size_t>(left_op.m_value) *
+             std::get<size_t>(right_op.m_value);
     case Equality:
       throw std::runtime_error("dont know how to evaluate equality yet");
     }
+  }
+};
+
+struct Call : Expression {
+  std::unique_ptr<Expression> m_function_expression;
+  std::vector<std::unique_ptr<Expression>> m_arguments;
+
+  Call(std::unique_ptr<Expression> &&function_expression,
+       std::vector<std::unique_ptr<Expression>> &&arguments)
+      : m_function_expression(std::move(function_expression)),
+        m_arguments(std::move(arguments)) {
   }
 };
 
@@ -92,8 +115,8 @@ struct ExpressionStatement : Statement {
   }
 
   void evaluate(Environment &env) const override {
-    size_t res = m_expression->evaluate(env);
-    std::cerr << res << std::endl;
+    Value val = m_expression->evaluate(env);
+    std::cerr << val.to_string() << std::endl;
   }
 };
 
@@ -107,7 +130,7 @@ struct DeclarationStatement : Statement {
   }
 
   void evaluate(Environment &env) const override {
-    size_t res = m_expression->evaluate(env);
+    Value res = m_expression->evaluate(env);
     env.declare(m_name, res);
   }
 };
@@ -130,6 +153,6 @@ struct AssignmentStatement : Statement {
     if (!env.is_declared(name)) {
       throw std::runtime_error("name not declared!");
     }
-    env[name] = m_expression->evaluate(env);
+    env.assign(name, m_expression->evaluate(env));
   }
 };

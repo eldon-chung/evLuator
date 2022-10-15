@@ -34,13 +34,14 @@ struct Token {
 };
 
 struct Lex {
-  std::string const &m_text;
+  std::string_view m_text;
   std::vector<Token> m_tokens;
+  size_t m_consumed = 0;
 
   static inline std::regex name_regex{R"([[:alpha:]_][[:alnum:]_]*)"};
   static inline std::regex num_regex{R"([[:digit:]]+)"};
 
-  Lex(std::string const &text) : m_text(text), m_tokens() {
+  Lex(std::string_view text) : m_text(text), m_tokens() {
     std::string_view curr_view{text};
 
     auto consume_whitespace = [&]() {
@@ -54,8 +55,9 @@ struct Lex {
 
     auto match_name = [&]() {
       std::cmatch res;
-      auto matched = std::regex_search(curr_view.begin(), curr_view.end(), res, name_regex,
-                                       std::regex_constants::match_continuous);
+      auto matched =
+          std::regex_search(curr_view.begin(), curr_view.end(), res, name_regex,
+                            std::regex_constants::match_continuous);
       assert(matched);
       std::string_view name{res[0].first, res[0].second};
       return Token{name, Token::Name};
@@ -96,7 +98,7 @@ struct Lex {
     while (true) {
       consume_whitespace();
       if (curr_view.empty()) {
-        m_tokens.push_back(Token{curr_view, Token::EoF});
+        // m_tokens.push_back(Token{curr_view, Token::EoF});
         break;
       } else if (std::isalpha(curr_view[0]) || curr_view[0] == '_') {
         insert_token(match_name());
@@ -112,5 +114,29 @@ struct Lex {
         }
       }
     }
+  }
+
+  bool eof() const {
+    return m_consumed >= m_tokens.size();
+  }
+
+  Token peek_token() const {
+    if (m_consumed >= m_tokens.size()) {
+      return Token{"", Token::EoF};
+    }
+    return m_tokens[m_consumed];
+  }
+
+  Token lookahead() const {
+    if (m_consumed + 1 >= m_tokens.size()) {
+      return Token{"", Token::EoF};
+    }
+    return m_tokens[m_consumed + 1];
+  }
+
+  Token consume() {
+    Token token = peek_token();
+    ++m_consumed;
+    return token;
   }
 };

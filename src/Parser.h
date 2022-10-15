@@ -14,6 +14,42 @@ struct Parser {
   Parser(Lex *luthor) : m_luthor(luthor) {
   }
 
+  std::unique_ptr<Statement> parse_statement() {
+    // Handle statements that start with keywords
+    switch (m_luthor->peek_type()) {
+    case Token::Var: {
+      m_luthor->consume();
+      Token name_token = expect(Token::Name);
+      std::string_view name_view{name_token.m_view};
+      expect(Token::Equal1);
+
+      auto parse_res = parse_expression();
+      expect(Token::Semicolon);
+      return std::make_unique<DeclarationStatement>(name_view,
+                                                    std::move(parse_res));
+    }
+    default:
+      break;
+    }
+
+    auto lhs = parse_expression();
+    switch (m_luthor->peek_type()) {
+    case Token::Semicolon:
+      m_luthor->consume();
+      return std::make_unique<ExpressionStatement>(std::move(lhs));
+    case Token::Equal1: {
+      m_luthor->consume();
+      auto rhs = parse_expression();
+      expect(Token::Semicolon);
+      return std::make_unique<AssignmentStatement>(std::move(lhs),
+                                                   std::move(rhs));
+    }
+
+    default:
+      throw std::runtime_error("yeah man idk also");
+    }
+  }
+
   std::unique_ptr<Expression> parse_expression() {
     return parse_expression(0);
   }

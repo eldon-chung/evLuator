@@ -2,3 +2,6 @@
 
 Expression::~Expression() {
 }
+
+Statement::~Statement() {
+}

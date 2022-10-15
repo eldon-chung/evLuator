@@ -8,6 +8,7 @@
 #include <regex>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 struct Token {
@@ -22,8 +23,10 @@ struct Token {
     Dot = '.',
     Lparen = '(',
     Rparen = ')',
+    Semicolon = ';',
     Number = 128,
     Name,
+    Var,
     Equal2,
     Invalid = 200,
     EoF,
@@ -39,7 +42,9 @@ struct Lex {
   size_t m_consumed = 0;
 
   static inline std::regex name_regex{R"([[:alpha:]_][[:alnum:]_]*)"};
-  static inline std::regex num_regex{R"([[:digit:]]+)"};
+  static inline std::unordered_map<std::string, Token::Type> keyword_list{
+      {"var", Token::Var},
+  };
 
   Lex(std::string_view text) : m_text(text), m_tokens() {
     std::string_view curr_view{text};
@@ -60,7 +65,12 @@ struct Lex {
                             std::regex_constants::match_continuous);
       assert(matched);
       std::string_view name{res[0].first, res[0].second};
-      return Token{name, Token::Name};
+      if (auto it = keyword_list.find(std::string(name));
+          it != keyword_list.end()) {
+        return Token{name, it->second};
+      } else {
+        return Token{name, Token::Name};
+      }
     };
 
     auto match_num = [&]() {
@@ -73,6 +83,8 @@ struct Lex {
     auto match_single_char = [&]() {
       std::string_view one_curr_view{curr_view.data(), curr_view.data() + 1};
       switch (curr_view[0]) {
+      case '=':
+        return Token{one_curr_view, Token::Equal1};
       case '+':
         return Token{one_curr_view, Token::Plus};
       case '-':
@@ -85,6 +97,8 @@ struct Lex {
         return Token{one_curr_view, Token::Lparen};
       case ')':
         return Token{one_curr_view, Token::Rparen};
+      case ';':
+        return Token{one_curr_view, Token::Semicolon};
       default:
         return Token{"", Token::Invalid};
       }
@@ -125,6 +139,13 @@ struct Lex {
       return Token{"", Token::EoF};
     }
     return m_tokens[m_consumed];
+  }
+
+  Token::Type peek_type() const {
+    if (m_consumed >= m_tokens.size()) {
+      return Token::EoF;
+    }
+    return m_tokens[m_consumed].m_type;
   }
 
   Token lookahead() const {

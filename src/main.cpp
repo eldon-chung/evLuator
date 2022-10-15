@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <vector>
 
+#include "AST.h"
 #include "Lex.h"
 
 std::string read_input(int fd) {
@@ -23,7 +24,7 @@ std::string read_input(int fd) {
   return std::string{input.data()};
 }
 
-int main() {
+void process_input() {
   std::string input = read_input(STDIN_FILENO);
   Lex luthor{input};
   for (auto const &token : luthor.m_tokens) {
@@ -38,4 +39,14 @@ int main() {
     }
     std::cout << "\n";
   }
+}
+
+int main() {
+
+  auto one = std::make_unique<Number>(1);
+  auto two = std::make_unique<Number>(2);
+
+  auto expr = std::make_unique<BinOp>(std::move(one), std::move(two), BinOp::Plus);
+
+  std::cout << expr->evaluate() << std::endl;
 }

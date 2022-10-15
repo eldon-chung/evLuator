@@ -20,6 +20,8 @@ struct Token {
     Bang = '!',
     Que = '?',
     Dot = '.',
+    Lparen = '(',
+    Rparen = ')',
     Number = 128,
     Name,
     Equal2,
@@ -71,16 +73,16 @@ struct Lex {
       switch (curr_view[0]) {
       case '+':
         return Token{one_curr_view, Token::Plus};
-        break;
       case '-':
         return Token{one_curr_view, Token::Dash};
-        break;
       case '/':
         return Token{one_curr_view, Token::Slash};
-        break;
       case '*':
         return Token{one_curr_view, Token::Star};
-        break;
+      case '(':
+        return Token{one_curr_view, Token::Lparen};
+      case ')':
+        return Token{one_curr_view, Token::Rparen};
       default:
         return Token{"", Token::Invalid};
       }

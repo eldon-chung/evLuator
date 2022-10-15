@@ -27,6 +27,7 @@ struct Token {
     Number = 128,
     Name,
     Var,
+    Fn,
     Equal2,
     Invalid = 200,
     EoF,
@@ -44,6 +45,7 @@ struct Lex {
   static inline std::regex name_regex{R"([[:alpha:]_][[:alnum:]_]*)"};
   static inline std::unordered_map<std::string, Token::Type> keyword_list{
       {"var", Token::Var},
+      {"fn", Token::Fn},
   };
 
   Lex(std::string_view text) : m_text(text), m_tokens() {

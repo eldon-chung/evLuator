@@ -155,6 +155,52 @@ struct ExpressionStatement : Statement {
   }
 };
 
+struct DeclFunction : Function {
+  std::string m_name;
+  std::vector<std::string> m_parameters;
+  Statement *m_body;
+
+  DeclFunction(std::string name, std::vector<std::string> const &parameters,
+               Statement *body)
+      : m_name(name), m_parameters(parameters), m_body(body) {
+  }
+
+  std::optional<Value> call(std::vector<Value> const &arguments) override {
+    Environment local_env;
+    if (m_parameters.size() != arguments.size()) {
+      throw std::runtime_error("argument mismatch!");
+    }
+
+    // set up the environment
+    for (size_t idx = 0; idx < m_parameters.size(); ++idx) {
+      local_env.declare(m_parameters[idx], arguments[idx]);
+    }
+
+    m_body->evaluate(local_env);
+    return std::nullopt;
+  }
+  std::string to_string() const override {
+    return std::string{"Function ["} + m_name + "]";
+  }
+};
+
+struct FunctionStatement : Statement {
+  std::string m_name;
+  std::vector<std::string> m_parameters;
+  std::unique_ptr<Statement> m_body;
+
+  FunctionStatement(std::string name, std::vector<std::string> &&parameters,
+                    std::unique_ptr<Statement> &&body)
+      : m_name(name), m_parameters(std::move(parameters)),
+        m_body(std::move(body)) {
+  }
+
+  void evaluate(Environment &env) const override {
+    env.declare(m_name, Value{std::make_shared<DeclFunction>(
+                            m_name, m_parameters, m_body.get())});
+  }
+};
+
 struct DeclarationStatement : Statement {
   std::string m_name;
   std::unique_ptr<Expression> m_expression;

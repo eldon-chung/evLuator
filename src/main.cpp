@@ -46,9 +46,12 @@ int main() {
   //   }
   // }
   Parser parser{&luthor};
+  std::vector<std::unique_ptr<Statement>> all_da_tingz;
   while (!luthor.eof()) {
-    auto res_ast = parser.parse_statement();
-    res_ast->evaluate(env);
+    all_da_tingz.push_back(parser.parse_statement());
+  }
+  for (const auto &stmt : all_da_tingz) {
+    stmt->evaluate(env);
   }
 }
 

@@ -28,6 +28,17 @@ struct Parser {
       return std::make_unique<DeclarationStatement>(name_view,
                                                     std::move(parse_res));
     }
+    case Token::Fn: {
+      expect(Token::Fn);
+      std::string name_token{expect(Token::Name).m_view};
+      expect(Token::Lparen);
+      std::vector<std::string> param_token_list{
+          std::string{expect(Token::Name).m_view}};
+      expect(Token::Rparen);
+      auto statement = parse_statement();
+      return std::make_unique<FunctionStatement>(
+          name_token, std::move(param_token_list), std::move(statement));
+    }
     default:
       break;
     }
@@ -55,28 +66,22 @@ struct Parser {
   }
 
   std::unique_ptr<Expression> parse_expression(int caller_precedence) {
-    // std::cerr << "0" << std::endl;
 
     auto lhs = parse_atom();
-    // std::cerr << "1" << std::endl;
 
     while (true) {
       Token peeked_token = m_luthor->peek_token();
-      // std::cerr << "2" << std::endl;
 
       if (peeked_token.m_type == Token::Lparen) {
         expect(Token::Lparen);
         std::vector<std::unique_ptr<Expression>> args_expr;
-        // std::cerr << "3" << std::endl;
 
         args_expr.push_back(parse_expression(0));
-        // std::cerr << "3.5" << std::endl;
 
         auto call_ast =
             std::make_unique<Call>(std::move(lhs), std::move(args_expr));
-        // std::cerr << "4" << std::endl;
+
         expect(Token::Rparen);
-        // std::cerr << "5" << std::endl;
 
         lhs = std::move(call_ast);
         continue;

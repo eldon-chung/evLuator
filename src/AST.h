@@ -105,6 +105,35 @@ struct Call : Expression {
       : m_function_expression(std::move(function_expression)),
         m_arguments(std::move(arguments)) {
   }
+
+  Value evaluate(Environment const &env) const override {
+    Value maybe_func = m_function_expression->evaluate(env);
+    if (!std::holds_alternative<std::shared_ptr<Function>>(maybe_func.m_value)) {
+      throw std::runtime_error("name does not refer to a function!");
+    }
+
+    Value arg_val = m_arguments.at(0)->evaluate(env);
+    std::optional<Value> maybe_ret_val =
+        std::get<std::shared_ptr<Function>>(maybe_func.m_value)
+            ->call(std::vector<Value>{arg_val});
+
+    if (!maybe_ret_val.has_value()) {
+      throw std::runtime_error("no return value received");
+    }
+
+    return maybe_ret_val.value();
+  }
+
+  void evaluate_as_statement(Environment const &env) const {
+    Value maybe_func = m_function_expression->evaluate(env);
+    if (!std::holds_alternative<std::shared_ptr<Function>>(maybe_func.m_value)) {
+      throw std::runtime_error("name does not refer to a function!");
+    }
+
+    Value arg_val = m_arguments.at(0)->evaluate(env);
+    std::get<std::shared_ptr<Function>>(maybe_func.m_value)
+        ->call(std::vector<Value>{arg_val});
+  }
 };
 
 struct ExpressionStatement : Statement {
@@ -115,8 +144,14 @@ struct ExpressionStatement : Statement {
   }
 
   void evaluate(Environment &env) const override {
-    Value val = m_expression->evaluate(env);
-    std::cerr << val.to_string() << std::endl;
+    Call *expression_as_call = dynamic_cast<Call *>(m_expression.get());
+    if (expression_as_call == nullptr) {
+      // expression was not a function call
+      Value val = m_expression->evaluate(env);
+      // std::cerr << val.to_string() << std::endl;
+    } else {
+      expression_as_call->evaluate_as_statement(env);
+    }
   }
 };
 

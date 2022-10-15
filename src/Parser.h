@@ -55,12 +55,30 @@ struct Parser {
   }
 
   std::unique_ptr<Expression> parse_expression(int caller_precedence) {
+    // std::cerr << "0" << std::endl;
+
     auto lhs = parse_atom();
+    // std::cerr << "1" << std::endl;
+
     while (true) {
       Token peeked_token = m_luthor->peek_token();
+      // std::cerr << "2" << std::endl;
 
       if (peeked_token.m_type == Token::Lparen) {
-        auto expr = parse_expression(0);
+        expect(Token::Lparen);
+        std::vector<std::unique_ptr<Expression>> args_expr;
+        // std::cerr << "3" << std::endl;
+
+        args_expr.push_back(parse_expression(0));
+        // std::cerr << "3.5" << std::endl;
+
+        auto call_ast =
+            std::make_unique<Call>(std::move(lhs), std::move(args_expr));
+        // std::cerr << "4" << std::endl;
+        expect(Token::Rparen);
+        // std::cerr << "5" << std::endl;
+
+        lhs = std::move(call_ast);
         continue;
       }
 
@@ -98,7 +116,7 @@ struct Parser {
     }
 
     default:
-      throw std::runtime_error("expected wrong type when parsing");
+      throw std::runtime_error("parse_atom: expected wrong type when parsing");
     };
   }
 
@@ -106,7 +124,7 @@ struct Parser {
     Token front_token = m_luthor->consume();
 
     if (front_token.m_type != type) {
-      throw std::runtime_error("expected wrong type when parsing");
+      throw std::runtime_error("expect: expected wrong type when parsing");
     }
     return front_token;
   }
